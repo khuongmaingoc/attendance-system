@@ -219,12 +219,13 @@ loadHistory();
 
 async function attendance(){
 
-    const employeeCode =
-        document
-        .getElementById("employeeCode")
-        .value
-        .trim()
-        .toUpperCase();
+	const formData = new FormData();
+ 
+		formData.append(
+		"employeeCode",
+		employeeCode
+	);
+ 
 
     if(!employeeCode){
         showError("Vui lòng nhập mã nhân viên");
@@ -237,15 +238,13 @@ async function attendance(){
 
     try{
 
-        const response = await fetch(
-            API_URL,
-            {
-                method:"POST",
-                body:JSON.stringify({
-                    employeeCode
-                })
-            }
-        );
+		const response = await fetch(
+			API_URL,
+			{
+			method:"POST",
+			body:formData
+			}
+		);
 
         const data = await response.json();
 
