@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Điểm Danh Nhân Viên</title>
+
+<style>
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+body{
+    font-family:Segoe UI, Arial, sans-serif;
+    background:#f4f6f9;
+    min-height:100vh;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    padding:20px;
+}
+
+.card{
+    width:100%;
+    max-width:450px;
+    background:white;
+    border-radius:20px;
+    padding:30px;
+    box-shadow:0 10px 30px rgba(0,0,0,0.1);
+}
+
+.header{
+    text-align:center;
+    margin-bottom:25px;
+}
+
+.header h1{
+    color:#2c3e50;
+    font-size:28px;
+}
+
+.header p{
+    color:#777;
+    margin-top:8px;
+}
+
+.input-group{
+    margin-bottom:20px;
+}
+
+label{
+    display:block;
+    margin-bottom:8px;
+    font-weight:600;
+}
+
+input{
+    width:100%;
+    padding:15px;
+    font-size:18px;
+    border:2px solid #ddd;
+    border-radius:10px;
+    outline:none;
+}
+
+input:focus{
+    border-color:#2196f3;
+}
+
+button{
+    width:100%;
+    padding:15px;
+    border:none;
+    border-radius:10px;
+    background:#2196f3;
+    color:white;
+    font-size:18px;
+    font-weight:bold;
+    cursor:pointer;
+    transition:0.3s;
+}
+
+button:hover{
+    background:#1976d2;
+}
+
+button:disabled{
+    background:#9e9e9e;
+}
+
+.loading{
+    text-align:center;
+    color:#2196f3;
+    margin-top:15px;
+    display:none;
+}
+
+.result{
+    margin-top:20px;
+    display:none;
+    padding:15px;
+    border-radius:10px;
+}
+
+.success{
+    background:#e8f5e9;
+    border:1px solid #4caf50;
+    color:#1b5e20;
+}
+
+.error{
+    background:#ffebee;
+    border:1px solid #f44336;
+    color:#b71c1c;
+}
+
+.result h3{
+    margin-bottom:10px;
+}
+
+.info{
+    margin-top:8px;
+}
+
+.history{
+    margin-top:25px;
+}
+
+.history h3{
+    margin-bottom:10px;
+}
+
+.history-item{
+    background:#f8f9fa;
+    padding:10px;
+    margin-top:8px;
+    border-radius:8px;
+    font-size:14px;
+}
+
+.footer{
+    text-align:center;
+    color:#888;
+    margin-top:20px;
+    font-size:12px;
+}
+
+</style>
+
+</head>
+<body>
+
+<div class="card">
+
+    <div class="header">
+        <h1>📋 Điểm Danh</h1>
+        <p>Nhập mã nhân viên để điểm danh</p>
+    </div>
+
+    <div class="input-group">
+        <label>Mã nhân viên</label>
+
+        <input
+            id="employeeCode"
+            placeholder="VD: NV001"
+            autocomplete="off">
+    </div>
+
+    <button id="btnAttendance">
+        Điểm Danh
+    </button>
+
+    <div class="loading" id="loading">
+        Đang xử lý...
+    </div>
+
+    <div id="result" class="result"></div>
+
+    <div class="history">
+        <h3>Lịch sử gần đây</h3>
+
+        <div id="historyList"></div>
+    </div>
+
+    <div class="footer">
+        Attendance System v1.0
+    </div>
+
+</div>
+
+<script>
+
+// Thay URL Deploy Web App của bạn vào đây
+
+const API_URL =
+"https://script.google.com/macros/s/AKfycbzar8ie1jKC4-LtV3O2LqmlIuLgany6AbaOuFzD6PyU9IyE9nmgNAPgUYjYmkByjCE2/exec
+";
+
+document
+.getElementById("employeeCode")
+.addEventListener("keyup", function(event){
+
+    this.value = this.value.toUpperCase();
+
+    if(event.key === "Enter"){
+        attendance();
+    }
+
+});
+
+document
+.getElementById("btnAttendance")
+.addEventListener("click", attendance);
+
+loadHistory();
+
+async function attendance(){
+
+    const employeeCode =
+        document
+        .getElementById("employeeCode")
+        .value
+        .trim()
+        .toUpperCase();
+
+    if(!employeeCode){
+        showError("Vui lòng nhập mã nhân viên");
+        return;
+    }
+
+    document.getElementById("loading").style.display="block";
+
+    document.getElementById("btnAttendance").disabled=true;
+
+    try{
+
+        const response = await fetch(
+            API_URL,
+            {
+                method:"POST",
+                headers:{
+                    "Content-Type":"application/json"
+                },
+                body:JSON.stringify({
+                    employeeCode
+                })
+            }
+        );
+
+        const data = await response.json();
+
+        if(data.success){
+
+            showSuccess(data);
+
+            saveHistory(data);
+
+            document.getElementById("employeeCode").value="";
+
+        }else{
+
+            showError(data.message);
+
+        }
+
+    }catch(err){
+
+        showError(
+            "Không kết nối được hệ thống"
+        );
+
+    }
+
+    document.getElementById("loading").style.display="none";
+
+    document.getElementById("btnAttendance").disabled=false;
+}
+
+function showSuccess(data){
+
+    const result =
+      document.getElementById("result");
+
+    result.className =
+      "result success";
+
+    result.style.display="block";
+
+    result.innerHTML =
+    `
+        <h3>✅ Điểm danh thành công</h3>
+
+        <div class="info">
+            <b>Mã NV:</b> ${data.employeeCode}
+        </div>
+
+        <div class="info">
+            <b>Họ tên:</b> ${data.fullName}
+        </div>
+
+        <div class="info">
+            <b>Phòng ban:</b> ${data.department}
+        </div>
+
+        <div class="info">
+            <b>Ngày:</b> ${data.date}
+        </div>
+
+        <div class="info">
+            <b>Giờ:</b> ${data.attendanceTime}
+        </div>
+    `;
+}
+
+function showError(message){
+
+    const result =
+       document.getElementById("result");
+
+    result.className =
+        "result error";
+
+    result.style.display="block";
+
+    result.innerHTML =
+    `
+       <h3>❌ Thông báo</h3>
+       <div>${message}</div>
+    `;
+}
+
+function saveHistory(data){
+
+    let history =
+      JSON.parse(
+        localStorage.getItem("attendanceHistory")
+      ) || [];
+
+    history.unshift(data);
+
+    history = history.slice(0,5);
+
+    localStorage.setItem(
+       "attendanceHistory",
+       JSON.stringify(history)
+    );
+
+    loadHistory();
+}
+
+function loadHistory(){
+
+    let history =
+      JSON.parse(
+        localStorage.getItem("attendanceHistory")
+      ) || [];
+
+    const list =
+      document.getElementById("historyList");
+
+    if(history.length===0){
+
+        list.innerHTML =
+        "<div>Chưa có dữ liệu</div>";
+
+        return;
+    }
+
+    list.innerHTML="";
+
+    history.forEach(item=>{
+
+        list.innerHTML +=
+        `
+        <div class="history-item">
+            <b>${item.employeeCode}</b>
+            - ${item.fullName}
+            <br>
+            ${item.date}
+            ${item.attendanceTime}
+        </div>
+        `;
+
+    });
+
+}
+
+</script>
+
+</body>
+</html>
